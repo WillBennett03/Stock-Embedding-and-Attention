@@ -7,10 +7,7 @@
 
 This store all of the models
 """
-from time import time_ns
 import tensorflow as tf
-import os
-from tensorflow.keras.layers.experimental import preprocessing
 import numpy as np
 
 def train_model(model, x, y , epochs, ckpt_name, ckpt_path='models'):
@@ -61,43 +58,6 @@ def get_embedding_model(embedding_size, stock_vocab_size, time_vocab_size, outpu
     model.compile(optimizer = 'Adam', loss = 'mse')
     model.summary()
     return model
-
-
-def get_control_embedding_model(embedding_size, stock_vocab_size, output_size, rate=0.1):
-    r"""
-    args:
-        embedding_size : int (the size of the embedding layer / output size),
-        stock_vocab_size : int (the number of stocks in the index / list used),
-        time_vocab_size : int (the number of days that can be used Max-min days)
-    returns:
-        tensorflow model
-
-    this model is the original i used and was insiperied by the wiki book embedding tutorial
-    - 
-    """
-    
-    Stock = tf.keras.layers.Input(name = 'Stock_inp', shape=[1])
-    # Data = tf.keras.layers.Input(name = 'Data_inp', shape=[5])
-
-    Stock_embedding = tf.keras.layers.Embedding(name = 'Stock_embedding', input_dim=stock_vocab_size, output_dim=embedding_size)(Stock)
-    # Stock_embedding = tf.keras.layers.Dropout(rate)(Stock_embedding)
-    # Time_embedding = tf.keras.layers.Dropout(rate)(Time_embedding)
-
-    
-    output = tf.keras.layers.Dense(output_size)(Stock_embedding)
-
-    model = tf.keras.Model(inputs =Stock, outputs = output)
-    model.compile(optimizer = 'Adam', loss = 'mse')
-    model.summary()
-    return model
-
-def train_control_embedding_model(model, x, y , epochs, ckpt_name, ckpt_path='models'):
-    ckpt_path = ckpt_path + '/' + ckpt_name +'.ckpt'
-    # ckpt_dir = os.path.dirname(ckpt_path)
-    cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=ckpt_path, save_weights_only=True, verbose=1)
-
-    x = x.transpose()
-    model.fit(x[0], y,epochs=epochs, callbacks=[cp_callback])
 
 ######## Tranformer models ##########
 
@@ -287,12 +247,12 @@ class curator(tf.keras.Model):
 
         self.stock_embedding = tf.keras.layers.Embedding(stock_vocab_size, d_model)
         self.time_embedding = tf.keras.layers.Embedding(stock_vocab_size, d_model)
-        self.attn_blocks = [AttentionBlocks(d_model, num_heads, dff, rate)]
         self.look_up = look_up_layer(data_table)
         self.output_layer = tf.keras.layers.Dense(output_size)
 
         self.time_vocab_size = time_vocab_size
         self.Nx = num_layers
+        self.attn_blocks = [AttentionBlocks(d_model, num_heads, dff, rate) for i in range(0, self.Nx)]
 
     def call(self, stock_token, time_token, day_data, training, mask):
         stock_embed = self.stock_embedding(stock_token)
@@ -342,6 +302,7 @@ def test_curator():
         print(pred)
         loss = loss_function(y, pred, loss_object)
         print(loss)
+
 
 if __name__ == '__main__':
     test_model()

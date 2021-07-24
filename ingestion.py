@@ -13,6 +13,7 @@ import pandas_datareader as web
 import datetime
 import numpy as np
 import json
+import pickle
 
 with open('config.json', 'r') as file:
     config = json.load(file)
@@ -117,9 +118,11 @@ class index_data:
         if get_new:
             self.index_dict = self.build_dict()
         else:
-            self.index_dict = get_dict()
+            self.index_dict = get_dict('data/'+self.index_name+'.json')
         
         self.preprocess_dict() 
+        self.save()
+
 
     def build_dict(self):
         index_table = get_index_table(self.index_name)
@@ -188,8 +191,10 @@ class index_data:
             Time_vocab_size : int,
         """
         
-        if isinstance(self.max_date, None) and isinstance(self.min_date, None):
+        if type(self.max_date_lim) == type(None) and type(self.min_date_lim) == type(None):
             self.get_min_max_date()
+        else:
+            self.min_date, self.max_date = self.min_date_lim, self.max_date_lim
 
         self.time_vocab_size = (self.max_date-self.min_date).days
         self.stock_vocab_size = len(self.index_dict)
@@ -242,3 +247,6 @@ class index_data:
                 self.max_date = current_max_date
 
 
+    def save(self, filename='_preprocessed.pkl'):
+        with open(self.index_name+filename, 'w+') as file:
+            pickle.dump(self, file)
